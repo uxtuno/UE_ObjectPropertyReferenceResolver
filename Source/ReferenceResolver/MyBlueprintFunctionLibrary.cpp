@@ -5,6 +5,7 @@
 #include <regex>
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 
 void UMyBlueprintFunctionLibrary::ResolveReference(UObject* WorldContextObject, UObject* Target, UDataTable* RulesDataTable, const FString& AssetDirectoryPath)
@@ -30,6 +31,13 @@ void UMyBlueprintFunctionLibrary::ResolveReference(UObject* WorldContextObject, 
 	// 指定したディレクトリ以下のアセットを取得
 	TArray<FAssetData> AssetDataList;
 	AssetRegistry.GetAssetsByPath(*AssetDirectoryPath, AssetDataList, true, true);
+
+	int32 Transaction = UKismetSystemLibrary::BeginTransaction(TEXT("ResolveReference"), FText::FromString(TEXT("オブジェクトプロパティの参照解決")), Target);
+	if (Transaction < 0)
+	{
+		return;
+	}
+	UKismetSystemLibrary::TransactObject(Target);
 
 	for (const FReferenceResolveRulesRow* Row : Rows)
 	{
@@ -76,6 +84,8 @@ void UMyBlueprintFunctionLibrary::ResolveReference(UObject* WorldContextObject, 
 	{
 		Target->MarkPackageDirty();
 	}
+
+	UKismetSystemLibrary::EndTransaction();
 }
 
 
