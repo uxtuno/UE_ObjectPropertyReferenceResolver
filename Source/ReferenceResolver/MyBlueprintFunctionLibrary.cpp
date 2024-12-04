@@ -1,9 +1,10 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "MyBlueprintFunctionLibrary.h"
 #include <regex>
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 
 
 void UMyBlueprintFunctionLibrary::ResolveReference(UObject* WorldContextObject, UObject* Target, UDataTable* RulesDataTable, const FString& AssetDirectoryPath)
@@ -13,7 +14,7 @@ void UMyBlueprintFunctionLibrary::ResolveReference(UObject* WorldContextObject, 
 		return;
 	}
 
-	// Blueprint‚Ìê‡‚ÍƒRƒ“ƒpƒCƒ‹Œã‚É¶¬‚³‚ê‚éƒNƒ‰ƒX‚ğ‘ÎÛ‚É‚·‚é•K—v‚ª‚ ‚é
+	// Blueprintã®å ´åˆã¯ã‚³ãƒ³ãƒ‘ã‚¤ãƒ«å¾Œã«ç”Ÿæˆã•ã‚Œã‚‹ã‚¯ãƒ©ã‚¹ã‚’å¯¾è±¡ã«ã™ã‚‹å¿…è¦ãŒã‚ã‚‹
 	if (UBlueprint* BluePrint = Cast<UBlueprint>(Target))
 	{
 		Target = BluePrint->GeneratedClass->GetDefaultObject();
@@ -26,7 +27,7 @@ void UMyBlueprintFunctionLibrary::ResolveReference(UObject* WorldContextObject, 
 	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(FName("AssetRegistry"));
 	IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
 
-	// w’è‚µ‚½ƒfƒBƒŒƒNƒgƒŠˆÈ‰º‚ÌƒAƒZƒbƒg‚ğæ“¾
+	// æŒ‡å®šã—ãŸãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªä»¥ä¸‹ã®ã‚¢ã‚»ãƒƒãƒˆã‚’å–å¾—
 	TArray<FAssetData> AssetDataList;
 	AssetRegistry.GetAssetsByPath(*AssetDirectoryPath, AssetDataList, true, true);
 
@@ -40,8 +41,8 @@ void UMyBlueprintFunctionLibrary::ResolveReference(UObject* WorldContextObject, 
 		FString PropertyPath = Row->PropertyPath;
 		FString AssetMatchRule = Row->AssetMatchRule;
 
-		// ³‹K•\Œ»‚ÅAsset‚ğŒŸõ
-		std::regex Regex(TCHAR_TO_UTF8(*Row->AssetMatchRule));
+		// æ­£è¦è¡¨ç¾ã§Assetã‚’æ¤œç´¢
+		std::regex Regex(TCHAR_TO_UTF8(*AssetMatchRule));
 		FAssetData* MatchAssetData = AssetDataList.FindByPredicate([&Regex](const FAssetData& AssetData)
 			{
 				return std::regex_search(TCHAR_TO_UTF8(*AssetData.PackageName.ToString()), Regex);
@@ -52,17 +53,28 @@ void UMyBlueprintFunctionLibrary::ResolveReference(UObject* WorldContextObject, 
 			UObject* Asset = MatchAssetData->GetAsset();
 			if (Asset)
 			{
-				// ƒŠƒtƒŒƒNƒVƒ‡ƒ“‚ğg—p‚µ‚ÄAw’è‚µ‚½ƒvƒƒpƒeƒB‚ÉƒAƒZƒbƒg‚ğƒZƒbƒg‚·‚é
+				// ãƒªãƒ•ãƒ¬ã‚¯ã‚·ãƒ§ãƒ³ã‚’ä½¿ç”¨ã—ã¦ã€æŒ‡å®šã—ãŸãƒ—ãƒ­ãƒ‘ãƒ†ã‚£ã«ã‚¢ã‚»ãƒƒãƒˆã‚’ã‚»ãƒƒãƒˆã™ã‚‹
 				FPropertyData* PropertyData = PropertyMap.Find(PropertyPath);
 				if (PropertyData)
 				{
 					if (const FObjectProperty* ObjectProperty = CastField<FObjectProperty>(PropertyData->Property))
 					{
+						// ãƒ—ãƒ­ãƒ‘ãƒ†ã‚£ã«ã‚¢ã‚»ãƒƒãƒˆå‚ç…§ã‚’ã‚»ãƒƒãƒˆ
 						ObjectProperty->SetObjectPropertyValue(const_cast<void*>(PropertyData->Container), Asset);
 					}
 				}
 			}
 		}
+	}
+
+	// ãƒ—ãƒ­ãƒ‘ãƒ†ã‚£ã‚’å¤‰æ›´ã—ãŸã“ã¨ã‚’ãƒãƒ¼ã‚¯
+	if (UBlueprint* Blueprint = Cast<UBlueprint>(Target))
+	{
+		FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+	}
+	else
+	{
+		Target->MarkPackageDirty();
 	}
 }
 
@@ -76,7 +88,7 @@ TMap<FString, UMyBlueprintFunctionLibrary::FPropertyData> UMyBlueprintFunctionLi
 		const FObjectProperty* ObjectProperty = ObjectPropertyIterator.Key();
 		FString PropertyPath;
 
-		// PropertyA.PropertyB.PropertyC... ‚Æ‚¢‚¤Œ`®‚É•ÏŠ·‚·‚é
+		// PropertyA.PropertyB.PropertyC... ã¨ã„ã†å½¢å¼ã«å¤‰æ›ã™ã‚‹
 		TArray<const FProperty*> PropertyChain;
 		ObjectPropertyIterator.GetPropertyChain(PropertyChain);
 		for (const FProperty* Property : PropertyChain)
